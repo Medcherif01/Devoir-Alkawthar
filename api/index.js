@@ -991,47 +991,58 @@ async function handleGeneralEvaluations(req, res) {
         
         // ----------------------------------------------------------------
         // Fonction utilitaire : calculer les scores pour un groupe d'évals
-        //   participation + comportement → sur 10, max = 10
-        //   faisabilité devoirs          → sur 10, max = 10
+        //   participation + comportement → sur 30 pour PEI1, sur 20 pour les autres
+        //   faisabilité devoirs          → toujours sur 20
         // ----------------------------------------------------------------
-        function calcScores(behaviors, participations, statuses) {
+        function calcScores(behaviors, participations, statuses, isPEI1) {
+            const maxPB = isPEI1 ? 30 : 20;
+
             const avgB = behaviors.length > 0
                 ? behaviors.reduce((a, b) => a + b, 0) / behaviors.length : 0;
             const avgP = participations.length > 0
                 ? participations.reduce((a, b) => a + b, 0) / participations.length : 0;
 
             // Moyenne comportement + participation (chaque note est sur 10)
-            // → score final sur 10, capé à 10
-            const participationBehaviorScore = Math.min(10, parseFloat(((avgB + avgP) / 2).toFixed(2)));
+            // → on ramène sur maxPB (30 ou 20)
+            const rawPB = ((avgB + avgP) / 2) / 10 * maxPB;
+            const participationBehaviorScore = Math.min(maxPB, parseFloat(rawPB.toFixed(2)));
 
-            // Faisabilité devoirs → sur 10
+            // Faisabilité devoirs → toujours sur 20
             const total = statuses.length;
             const done = statuses.filter(s => s === 'Fait').length;
             const partial = statuses.filter(s => s === 'Partiellement Fait').length;
             const rate = total > 0 ? (done + partial * 0.5) / total : 0;
-            const homeworkScore = Math.min(10, parseFloat((rate * 10).toFixed(2)));
+            const homeworkScore = Math.min(20, parseFloat((rate * 20).toFixed(2)));
 
-            return { participationBehaviorScore, homeworkScore };
+            return { participationBehaviorScore, homeworkScore, maxPB, maxHW: 20 };
         }
         
         // Calculer les résultats
         const results = Object.values(studentEvaluations).map(sd => {
+            const isPEI1 = sd.classe === 'PEI1';
+            const maxPB = isPEI1 ? 30 : 20;
+            const maxHW = 20;
+
             // Scores globaux
-            const global = calcScores(sd.behaviors, sd.participations, sd.statuses);
+            const global = calcScores(sd.behaviors, sd.participations, sd.statuses, isPEI1);
             
             // Scores par matière
             const subjectScores = {};
             for (const [subj, data] of Object.entries(sd.bySubject)) {
-                subjectScores[subj] = calcScores(data.behaviors, data.participations, data.statuses);
+                subjectScores[subj] = calcScores(data.behaviors, data.participations, data.statuses, isPEI1);
             }
             
             return {
                 classe: sd.classe,
                 student: sd.student,
-                // Scores globaux (sur 10 chacun)
+                isPEI1,
+                maxPB,
+                maxHW,
+                // Scores globaux
                 participationBehaviorScore: global.participationBehaviorScore,
                 homeworkScore: global.homeworkScore,
                 totalScore: parseFloat((global.participationBehaviorScore + global.homeworkScore).toFixed(2)),
+                totalMax: maxPB + maxHW,
                 // Scores par matière
                 subjectScores
             };

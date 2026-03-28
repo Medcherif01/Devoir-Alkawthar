@@ -970,11 +970,11 @@ button[type="submit"] { background: var(--secondary-color); color: white; border
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: 140px;
+    height: 160px;          /* = CHART_H en JS */
     font-size: .68rem;
-    opacity: .7;
+    opacity: .85;
     text-align: right;
-    min-width: 18px;
+    min-width: 22px;
     flex-shrink: 0;
     padding-bottom: 22px; /* aligner avec les labels matière */
 }
@@ -986,7 +986,8 @@ button[type="submit"] { background: var(--secondary-color); color: white; border
     gap: 18px;
     position: relative;
     flex: 1;
-    min-height: 162px; /* 140 barres + 22 label */
+    /* hauteur définie inline via JS (CHART_H + label) */
+    min-height: 182px; /* 160 barres + 22 label */
 }
 .gec-grid-lines {
     position: absolute;
@@ -1096,7 +1097,7 @@ button[type="submit"] { background: var(--secondary-color); color: white; border
     .gec-card { padding: 14px 12px 10px; }
     .gec-title { font-size: .82rem; }
     .gec-toggle-btn { font-size: .72rem; padding: 4px 10px; }
-    .gec-y-axis { font-size: .6rem; min-width: 14px; }
+    .gec-y-axis { font-size: .6rem; min-width: 18px; }
     .gec-bars-area { gap: 10px; }
     .gec-bar-label { font-size: .58rem; }
     .gec-global-summary { font-size: .72rem; }

@@ -2279,8 +2279,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     subject: 'Matière',
                     chart:   'Diagramme',
                     table:   'Tableau',
-                    toggle:  'Afficher en Tableau',
-                    toggleC: 'Afficher en Diagramme',
+                    toggle:  '📋 Afficher en Tableau',
+                    toggleC: '📊 Afficher en Diagramme',
                     noData:  'Aucune donnée disponible'
                 },
                 ar: {
@@ -2291,63 +2291,74 @@ document.addEventListener('DOMContentLoaded', () => {
                     subject: 'المادة',
                     chart:   'مخطط',
                     table:   'جدول',
-                    toggle:  'عرض كجدول',
-                    toggleC: 'عرض كمخطط',
+                    toggle:  '📋 عرض كجدول',
+                    toggleC: '📊 عرض كمخطط',
                     noData:  'لا توجد بيانات'
                 }
             };
             const tx = t[lang] || t.fr;
 
-            // Couleurs distinctes par matière (palette fixe)
-            const PALETTE = [
-                '#6366f1','#f59e0b','#10b981','#ef4444',
-                '#8b5cf6','#06b6d4','#f97316','#ec4899',
-                '#84cc16','#14b8a6'
-            ];
+            // Deux couleurs fixes : bleu pour PB, orange pour HW
+            const COLOR_PB = '#6366f1';  // indigo/bleu — Participation & Comportement
+            const COLOR_HW = '#f59e0b';  // orange      — Faisabilité Devoirs
+
+            // Barèmes officiels
+            const maxPB = studentEval.maxPB || (studentEval.isPEI1 ? 30 : 20);
+            const maxHW = studentEval.maxHW || 20;
+            const totalMax = maxPB + maxHW;
+
+            // Scores globaux
+            const globalPB    = studentEval.participationBehaviorScore;
+            const globalHW    = studentEval.homeworkScore;
+            const globalTotal = studentEval.totalScore;
 
             // Construire la liste des matières triées
             const subjects = Object.keys(studentEval.subjectScores || {}).sort();
-            const globalPB = studentEval.participationBehaviorScore;
-            const globalHW = studentEval.homeworkScore;
-            const globalTotal = studentEval.totalScore;
 
             // ---- Render diagramme barres verticales ----
             function renderChart() {
                 if (!subjects.length) {
                     return `<p style="text-align:center;opacity:.7">${tx.noData}</p>`;
                 }
-                const BAR_W = 32;   // px largeur d'une barre
-                const BAR_GAP = 8;  // px espace entre barres d'un même groupe
-                const GRP_GAP = 18; // px entre groupes (matières)
-                const CHART_H = 140;// px hauteur zone barres
-                const MAX = 10;
 
-                let bars = '';
-                let labels = '';
-                let legendItems = '';
-                const usedColors = {};
+                const BAR_W   = 34;   // px largeur d'une barre
+                const BAR_GAP = 8;    // px espace entre les deux barres d'un groupe
+                const CHART_H = 160;  // px hauteur totale de la zone barres
 
-                subjects.forEach((subj, i) => {
-                    const sc = studentEval.subjectScores[subj];
-                    const pb = sc.participationBehaviorScore;
-                    const hw = sc.homeworkScore;
-                    const colorPB = PALETTE[i * 2 % PALETTE.length];
-                    const colorHW = PALETTE[(i * 2 + 1) % PALETTE.length];
-                    usedColors[subj] = { pb: colorPB, hw: colorHW };
+                // L'axe Y couvre le max des deux types : max(maxPB, maxHW)
+                const Y_MAX = Math.max(maxPB, maxHW);
 
-                    const hPB = Math.round((pb / MAX) * CHART_H);
-                    const hHW = Math.round((hw / MAX) * CHART_H);
+                // Graduations de l'axe Y : on génère ~6 ticks réguliers
+                function yTicks() {
+                    const step = Y_MAX <= 20 ? 5 : 10;
+                    const ticks = [];
+                    for (let v = Y_MAX; v >= 0; v -= step) ticks.push(v);
+                    if (ticks[ticks.length - 1] !== 0) ticks.push(0);
+                    return ticks;
+                }
+                const ticks = yTicks();
+
+                let barsHTML = '';
+                subjects.forEach((subj) => {
+                    const sc  = studentEval.subjectScores[subj];
+                    const pb  = sc.participationBehaviorScore;
+                    const hw  = sc.homeworkScore;
+                    // Hauteurs proportionnelles à l'axe commun Y_MAX
+                    const hPB = Math.round((pb / Y_MAX) * CHART_H);
+                    const hHW = Math.round((hw / Y_MAX) * CHART_H);
                     const grpW = BAR_W * 2 + BAR_GAP;
 
-                    bars += `
+                    barsHTML += `
                       <div class="gec-group" style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
                         <div style="display:flex;align-items:flex-end;gap:${BAR_GAP}px;height:${CHART_H}px;">
-                          <div class="gec-bar" title="${tx.pb}: ${pb.toFixed(1)}/10"
-                               style="width:${BAR_W}px;height:${hPB}px;background:${colorPB};border-radius:4px 4px 0 0;position:relative;">
+                          <div class="gec-bar"
+                               title="${tx.pb}: ${pb.toFixed(1)}/${maxPB}"
+                               style="width:${BAR_W}px;height:${hPB}px;background:${COLOR_PB};border-radius:4px 4px 0 0;position:relative;min-height:2px;">
                             <span class="gec-bar-val">${pb.toFixed(1)}</span>
                           </div>
-                          <div class="gec-bar" title="${tx.hw}: ${hw.toFixed(1)}/10"
-                               style="width:${BAR_W}px;height:${hHW}px;background:${colorHW};border-radius:4px 4px 0 0;position:relative;">
+                          <div class="gec-bar"
+                               title="${tx.hw}: ${hw.toFixed(1)}/${maxHW}"
+                               style="width:${BAR_W}px;height:${hHW}px;background:${COLOR_HW};border-radius:4px 4px 0 0;position:relative;min-height:2px;">
                             <span class="gec-bar-val">${hw.toFixed(1)}</span>
                           </div>
                         </div>
@@ -2355,31 +2366,36 @@ document.addEventListener('DOMContentLoaded', () => {
                       </div>`;
                 });
 
-                // Légende globale (PB / HW)
-                const legendHTML = `
-                  <div class="gec-legend">
-                    <span class="gec-legend-dot" style="background:#6366f1"></span><span>${tx.pb}</span>
-                    <span class="gec-legend-dot" style="background:#f59e0b;margin-left:12px;"></span><span>${tx.hw}</span>
-                  </div>`;
+                // Lignes de grille horizontales (une par tick)
+                const gridLines = ticks.map(v => {
+                    const pct = (v / Y_MAX) * 100;
+                    return `<div class="gec-grid-line" style="bottom:${pct}%"></div>`;
+                }).join('');
+
+                // Axe Y avec les vraies valeurs
+                const yAxisHTML = ticks.map(v =>
+                    `<span>${v}</span>`
+                ).join('');
 
                 return `
                   <div class="gec-chart-wrap">
-                    ${legendHTML}
+                    <div class="gec-legend">
+                      <span class="gec-legend-dot" style="background:${COLOR_PB}"></span>
+                      <span>${tx.pb} (/${maxPB})</span>
+                      <span class="gec-legend-dot" style="background:${COLOR_HW};margin-left:12px;"></span>
+                      <span>${tx.hw} (/20)</span>
+                    </div>
                     <div class="gec-chart-scroll">
-                      <div class="gec-y-axis">
-                        ${[10,8,6,4,2,0].map(v=>`<span>${v}</span>`).join('')}
-                      </div>
-                      <div class="gec-bars-area">
-                        <div class="gec-grid-lines">
-                          ${[0,20,40,60,80,100].map(p=>`<div class="gec-grid-line" style="bottom:${p}%"></div>`).join('')}
-                        </div>
-                        ${bars}
+                      <div class="gec-y-axis">${yAxisHTML}</div>
+                      <div class="gec-bars-area" style="height:${CHART_H}px;">
+                        <div class="gec-grid-lines">${gridLines}</div>
+                        ${barsHTML}
                       </div>
                     </div>
                     <div class="gec-global-summary">
-                      <span>${tx.pb}: <strong>${globalPB.toFixed(1)}/10</strong></span>
-                      <span>${tx.hw}: <strong>${globalHW.toFixed(1)}/10</strong></span>
-                      <span>${tx.total}: <strong>${globalTotal.toFixed(1)}/20</strong></span>
+                      <span>${tx.pb}: <strong>${globalPB.toFixed(1)}/${maxPB}</strong></span>
+                      <span>${tx.hw}: <strong>${globalHW.toFixed(1)}/20</strong></span>
+                      <span>${tx.total}: <strong>${globalTotal.toFixed(1)}/${totalMax}</strong></span>
                     </div>
                   </div>`;
             }
@@ -2389,19 +2405,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!subjects.length) {
                     return `<p style="text-align:center;opacity:.7">${tx.noData}</p>`;
                 }
+                const PALETTE = [
+                    '#6366f1','#10b981','#ef4444','#8b5cf6',
+                    '#06b6d4','#84cc16','#14b8a6','#ec4899'
+                ];
                 let rows = '';
                 subjects.forEach((subj, i) => {
-                    const sc = studentEval.subjectScores[subj];
-                    const pb = sc.participationBehaviorScore;
-                    const hw = sc.homeworkScore;
-                    const tot = Math.min(20, pb + hw);
+                    const sc  = studentEval.subjectScores[subj];
+                    const pb  = sc.participationBehaviorScore;
+                    const hw  = sc.homeworkScore;
+                    const tot = parseFloat((pb + hw).toFixed(2));
                     const color = PALETTE[i % PALETTE.length];
                     rows += `
                       <tr>
                         <td><span class="gec-dot" style="background:${color}"></span>${subj}</td>
-                        <td class="gec-td-num">${pb.toFixed(1)}/10</td>
-                        <td class="gec-td-num">${hw.toFixed(1)}/10</td>
-                        <td class="gec-td-num gec-td-total">${tot.toFixed(1)}/20</td>
+                        <td class="gec-td-num" style="color:${COLOR_PB};font-weight:700;">${pb.toFixed(1)}/${maxPB}</td>
+                        <td class="gec-td-num" style="color:${COLOR_HW};font-weight:700;">${hw.toFixed(1)}/20</td>
+                        <td class="gec-td-num gec-td-total">${tot.toFixed(1)}/${totalMax}</td>
                       </tr>`;
                 });
                 return `
@@ -2410,18 +2430,18 @@ document.addEventListener('DOMContentLoaded', () => {
                       <thead>
                         <tr>
                           <th>${tx.subject}</th>
-                          <th>${tx.pb}</th>
-                          <th>${tx.hw}</th>
-                          <th>${tx.total}</th>
+                          <th style="color:${COLOR_PB};">${tx.pb} (/${maxPB})</th>
+                          <th style="color:${COLOR_HW};">${tx.hw} (/20)</th>
+                          <th>${tx.total} (/${totalMax})</th>
                         </tr>
                       </thead>
                       <tbody>${rows}</tbody>
                       <tfoot>
                         <tr class="gec-tfoot">
                           <td>${tx.total}</td>
-                          <td class="gec-td-num">${globalPB.toFixed(1)}/10</td>
-                          <td class="gec-td-num">${globalHW.toFixed(1)}/10</td>
-                          <td class="gec-td-num gec-td-total">${globalTotal.toFixed(1)}/20</td>
+                          <td class="gec-td-num" style="color:${COLOR_PB};font-weight:700;">${globalPB.toFixed(1)}/${maxPB}</td>
+                          <td class="gec-td-num" style="color:${COLOR_HW};font-weight:700;">${globalHW.toFixed(1)}/20</td>
+                          <td class="gec-td-num gec-td-total">${globalTotal.toFixed(1)}/${totalMax}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -2432,7 +2452,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let viewMode = 'chart'; // 'chart' | 'table'
 
             function rebuild() {
-                const inner = viewMode === 'chart' ? renderChart() : renderTable();
+                const inner    = viewMode === 'chart' ? renderChart() : renderTable();
                 const btnLabel = viewMode === 'chart' ? tx.toggle : tx.toggleC;
                 container.innerHTML = `
                   <div class="gec-card">
