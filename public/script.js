@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let currentDate = getNearestSchoolDay(moment());
     let teacherPlanData = [];
     let currentTeacherContext = {
         teacherName: null,
@@ -121,6 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return date; // fallback
     }
 
+    // Initialiser currentDate APRÈS la définition du calendrier et des fonctions helper
+    let currentDate = getNearestSchoolDay(moment());
 
     const studentData = {
         PEI1: [ { name: "Faysal", photo: "https://lh3.googleusercontent.com/d/1IB6BKROX3TRxaIIHVVVWbB7-Ii-V8VrC", birthday: "4/2014" }, { name: "Bilal", photo: "https://lh3.googleusercontent.com/d/1B0QUZJhpSad5Fs3qRTugUe4oyTlUDEVu", birthday: "2/2015" }, { name: "Jad", photo: "https://lh3.googleusercontent.com/d/1VLvrWjeJwaClf4pSaLiwjnS79N-HrsFr", birthday: "8/2014" }, { name: "Manaf", photo: "https://lh3.googleusercontent.com/d/1h46Tqtqcp5tNqdY62wV6pyZFYknCEMWY", birthday: "8/2014" } ],
