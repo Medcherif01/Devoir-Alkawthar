@@ -3,8 +3,77 @@ document.addEventListener('DOMContentLoaded', () => {
     let teacherPlanData = [];
     let currentTeacherContext = {
         teacherName: null,
-        weekHomeworks: null
-    }; 
+        weekHomeworks: null,
+        // Pour la navigation automatique après enregistrement
+        allWeekHomeworks: null,  // tous les devoirs de la semaine (toutes classes)
+        selectedClass: null
+    };
+
+    // =====================================================================
+    // CALENDRIER SCOLAIRE OFFICIEL - 31 semaines
+    // =====================================================================
+    const SCHOOL_CALENDAR = {
+        1:  {start:'2025-08-31', end:'2025-09-04'},
+        2:  {start:'2025-09-07', end:'2025-09-11'},
+        3:  {start:'2025-09-14', end:'2025-09-18'},
+        4:  {start:'2025-09-21', end:'2025-09-25'},
+        5:  {start:'2025-09-28', end:'2025-10-02'},
+        6:  {start:'2025-10-05', end:'2025-10-09'},
+        7:  {start:'2025-10-12', end:'2025-10-16'},
+        8:  {start:'2025-10-19', end:'2025-10-23'},
+        9:  {start:'2025-10-26', end:'2025-10-30'},
+        10: {start:'2025-11-02', end:'2025-11-06'},
+        11: {start:'2025-11-09', end:'2025-11-13'},
+        12: {start:'2025-11-16', end:'2025-11-20'},
+        13: {start:'2025-11-23', end:'2025-11-27'},
+        14: {start:'2025-11-30', end:'2025-12-04'},
+        15: {start:'2025-12-07', end:'2025-12-11'},
+        16: {start:'2025-12-14', end:'2025-12-18'},
+        17: {start:'2025-12-21', end:'2025-12-25'},
+        18: {start:'2026-01-18', end:'2026-01-22'},
+        19: {start:'2026-01-25', end:'2026-01-29'},
+        20: {start:'2026-02-01', end:'2026-02-05'},
+        21: {start:'2026-02-08', end:'2026-02-12'},
+        22: {start:'2026-02-15', end:'2026-02-19'},
+        23: {start:'2026-02-22', end:'2026-02-26'},
+        24: {start:'2026-03-01', end:'2026-03-05'},
+        25: {start:'2026-03-29', end:'2026-04-02'},
+        26: {start:'2026-04-05', end:'2026-04-09'},
+        27: {start:'2026-04-12', end:'2026-04-16'},
+        28: {start:'2026-04-19', end:'2026-04-23'},
+        29: {start:'2026-04-26', end:'2026-04-30'},
+        30: {start:'2026-05-03', end:'2026-05-07'},
+        31: {start:'2026-05-10', end:'2026-05-14'}
+    };
+
+    /**
+     * Retourne le numéro de semaine scolaire pour une date donnée (YYYY-MM-DD).
+     * Retourne null si la date est en période de vacances.
+     */
+    function getSchoolWeekNumber(dateStr) {
+        const d = moment.utc(dateStr, 'YYYY-MM-DD');
+        for (const [num, range] of Object.entries(SCHOOL_CALENDAR)) {
+            const start = moment.utc(range.start, 'YYYY-MM-DD');
+            const end   = moment.utc(range.end,   'YYYY-MM-DD').endOf('day');
+            if (d.isBetween(start, end, null, '[]')) {
+                return parseInt(num, 10);
+            }
+        }
+        return null; // date en vacances ou hors calendrier
+    }
+
+    /**
+     * Retourne true si la date est une date scolaire valide
+     * (appartient à une semaine du calendrier ET est du dim-jeu).
+     */
+    function isSchoolDate(dateStr) {
+        const weekNum = getSchoolWeekNumber(dateStr);
+        if (weekNum === null) return false;
+        const dayOfWeek = moment.utc(dateStr, 'YYYY-MM-DD').day();
+        // 0=dimanche, 1=lundi, 2=mardi, 3=mercredi, 4=jeudi
+        return dayOfWeek >= 0 && dayOfWeek <= 4;
+    }
+
 
     const studentData = {
         PEI1: [ { name: "Faysal", photo: "https://lh3.googleusercontent.com/d/1IB6BKROX3TRxaIIHVVVWbB7-Ii-V8VrC", birthday: "4/2014" }, { name: "Bilal", photo: "https://lh3.googleusercontent.com/d/1B0QUZJhpSad5Fs3qRTugUe4oyTlUDEVu", birthday: "2/2015" }, { name: "Jad", photo: "https://lh3.googleusercontent.com/d/1VLvrWjeJwaClf4pSaLiwjnS79N-HrsFr", birthday: "8/2014" }, { name: "Manaf", photo: "https://lh3.googleusercontent.com/d/1h46Tqtqcp5tNqdY62wV6pyZFYknCEMWY", birthday: "8/2014" } ],
@@ -383,12 +452,13 @@ document.addEventListener('DOMContentLoaded', () => {
         cardsTitle.style.display = 'none';
         weekTitle.style.display = 'block';
         
+        // Filtrer uniquement les devoirs dans les semaines scolaires (exclure vacances/jours fériés)
         const homeworks = teacherPlanData.filter(item => {
             if (!item.Enseignant || item.Enseignant !== teacherName || !item.Devoirs || !item.Jour || item.Jour === 'Invalid date') {
                 return false;
             }
-            const dayOfWeek = moment.utc(item.Jour, 'YYYY-MM-DD').day();
-            return dayOfWeek >= 0 && dayOfWeek <= 4;
+            // Utiliser le calendrier scolaire officiel pour exclure les vacances
+            return isSchoolDate(item.Jour);
         });
 
         if (homeworks.length === 0) {
@@ -396,31 +466,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Regrouper par numéro de semaine scolaire officiel
         const homeworksByWeek = {};
-        const weekAnchor = moment.utc('2025-09-28').startOf('day'); 
 
         homeworks.forEach(hw => {
-            const hwDate = moment.utc(hw.Jour, 'YYYY-MM-DD');
-            
-            // --- CORRECTION CLÉ ---
-            // Force le début de la semaine au dimanche (jour 0) pour être indépendant de la langue
-            const startOfWeekForHw = hwDate.clone().day(0); 
-            
-            const weekDiff = startOfWeekForHw.diff(weekAnchor, 'weeks');
-            const weekNumber = 5 + weekDiff;
-            const weekKey = `Semaine ${weekNumber}`;
+            const weekNum = getSchoolWeekNumber(hw.Jour);
+            if (weekNum === null) return; // ne devrait pas arriver après le filtre
+            const weekKey = `Semaine ${weekNum}`;
+            const calWeek = SCHOOL_CALENDAR[weekNum];
 
             if (!homeworksByWeek[weekKey]) {
                 homeworksByWeek[weekKey] = {
                     homeworks: [],
-                    startDate: startOfWeekForHw
+                    weekNum: weekNum,
+                    startDate: moment.utc(calWeek.start, 'YYYY-MM-DD'),
+                    endDate:   moment.utc(calWeek.end,   'YYYY-MM-DD')
                 };
             }
             homeworksByWeek[weekKey].homeworks.push(hw);
         });
 
+        // Trier par numéro de semaine décroissant (la plus récente d'abord)
         const sortedWeekKeys = Object.keys(homeworksByWeek).sort((a, b) => {
-            return homeworksByWeek[b].startDate.diff(homeworksByWeek[a].startDate);
+            return homeworksByWeek[b].weekNum - homeworksByWeek[a].weekNum;
         });
         
         sortedWeekKeys.forEach(weekKey => {
@@ -428,10 +496,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const button = document.createElement('button');
             button.className = 'week-button';
             const startOfWeek = weekData.startDate.clone().locale(document.documentElement.lang);
-            const endOfWeek = startOfWeek.clone().add(4, 'days');
+            const endOfWeek   = weekData.endDate.clone().locale(document.documentElement.lang);
             
-            const weekNumberFromName = weekKey.split(' ')[1];
-            button.textContent = `${translations[document.documentElement.lang].weekLabel} ${weekNumberFromName} (${startOfWeek.format('D MMM')} - ${endOfWeek.format('D MMM')})`;
+            button.textContent = `${translations[document.documentElement.lang].weekLabel} ${weekData.weekNum} (${startOfWeek.format('D MMM')} - ${endOfWeek.format('D MMM')})`;
             
             button.addEventListener('click', (e) => {
                 weekContainer.querySelectorAll('.week-button').forEach(btn => btn.classList.remove('active'));
@@ -446,6 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sauvegarder le contexte pour navigation
         currentTeacherContext.teacherName = teacherName;
         currentTeacherContext.weekHomeworks = weekHomeworks;
+        currentTeacherContext.allWeekHomeworks = weekHomeworks; // référence complète pour navigation
+        currentTeacherContext.selectedClass = null;
         
         const teacherDashboardView = document.getElementById('teacher-dashboard-view');
         const cardsContainer = teacherDashboardView.querySelector('#homework-cards-container');
@@ -510,6 +579,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function displayHomeworkCards(teacherName, weekHomeworks, selectedClass = null) {
+        // Mettre à jour le contexte avec la classe sélectionnée
+        currentTeacherContext.selectedClass = selectedClass;
+        // Conserver les devoirs de la classe actuelle pour la navigation
+        currentTeacherContext.weekHomeworks = weekHomeworks;
+
         const teacherDashboardView = document.getElementById('teacher-dashboard-view');
         const cardsContainer = teacherDashboardView.querySelector('#homework-cards-container');
         const cardsTitle = teacherDashboardView.querySelector('#homework-cards-title');
@@ -523,8 +597,8 @@ document.addEventListener('DOMContentLoaded', () => {
         backButton.className = 'back-to-classes-btn';
         backButton.textContent = 'Retour aux classes';
         backButton.addEventListener('click', () => {
-            if (currentTeacherContext.teacherName && currentTeacherContext.weekHomeworks) {
-                displayClassSelector(currentTeacherContext.teacherName, currentTeacherContext.weekHomeworks);
+            if (currentTeacherContext.teacherName && currentTeacherContext.allWeekHomeworks) {
+                displayClassSelector(currentTeacherContext.teacherName, currentTeacherContext.allWeekHomeworks);
             }
         });
         cardsContainer.appendChild(backButton);
@@ -553,6 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const isEvaluated = allEvaluations.some(ev => ev.date === hw.Jour && ev.class === hw.Classe && ev.subject === hw.Matière);
             const card = document.createElement('div');
             card.className = `homework-card ${isEvaluated ? 'evaluated' : ''}`;
+            card.dataset.date = hw.Jour;
+            card.dataset.classe = hw.Classe;
+            card.dataset.subject = hw.Matière;
             card.innerHTML = `<h4>${hw.Matière}</h4><p><strong>🗓️ Date:</strong> <span>${moment(hw.Jour).locale(document.documentElement.lang).format('dddd D MMMM')}</span></p>`;
             card.addEventListener('click', () => {
                 cardsContainer.querySelectorAll('.homework-card').forEach(c => c.classList.remove('active'));
@@ -603,13 +680,125 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/evaluations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evaluations }) });
             if (!response.ok) throw new Error(`Erreur d'enregistrement`);
-            alert("Évaluations enregistrées !");
-            const activeTeacherCard = document.querySelector('.teacher-icon-card.active');
-            if (activeTeacherCard) {
-                displayWeekSelector(activeTeacherCard.dataset.teacherName);
-            }
+
+            // Marquer la carte active comme évaluée visuellement
+            const activeCard = document.querySelector('.homework-card.active');
+            if (activeCard) activeCard.classList.add('evaluated');
+
+            // -------------------------------------------------------
+            // NAVIGATION AUTOMATIQUE vers le devoir suivant
+            // Ordre : devoir suivant dans la même classe (par date)
+            //         → classe suivante même date
+            //         → date suivante (toutes classes)
+            // -------------------------------------------------------
+            await navigateToNextHomework(className, date, subject);
+
         } catch (error) { 
             console.error("Erreur:", error); alert("Une erreur est survenue."); 
+        }
+    }
+
+    /**
+     * Navigue automatiquement vers le prochain devoir après enregistrement.
+     * Logique :
+     *   1. Prochain devoir de la même classe (date suivante dans la classe)
+     *   2. Sinon, prochaine classe avec la même date
+     *   3. Sinon, prochaine date (toutes classes confondues)
+     *   4. Sinon, on revient à la liste des semaines (tout évalué)
+     */
+    async function navigateToNextHomework(currentClass, currentDate, currentSubject) {
+        const allHw = currentTeacherContext.allWeekHomeworks;
+        const teacherName = currentTeacherContext.teacherName;
+
+        if (!allHw || allHw.length === 0) {
+            // Retour à la sélection de semaine
+            const activeTeacherCard = document.querySelector('.teacher-icon-card.active');
+            if (activeTeacherCard) displayWeekSelector(activeTeacherCard.dataset.teacherName);
+            return;
+        }
+
+        // Trier tous les devoirs par date puis par classe
+        const sorted = [...allHw].sort((a, b) => {
+            const dateDiff = new Date(a.Jour) - new Date(b.Jour);
+            if (dateDiff !== 0) return dateDiff;
+            return a.Classe.localeCompare(b.Classe);
+        });
+
+        // Récupérer les évaluations déjà enregistrées pour connaître l'état actuel
+        let evaluatedSet = new Set();
+        try {
+            const allDates = [...new Set(sorted.map(h => h.Jour))];
+            const allClasses = [...new Set(sorted.map(h => h.Classe))];
+            const promises = allClasses.flatMap(cls =>
+                allDates.map(d => fetch(`/api/evaluations?class=${cls}&date=${d}`).then(r => r.json()))
+            );
+            const results = await Promise.all(promises);
+            results.forEach(res => {
+                (res.evaluations || []).forEach(ev => {
+                    evaluatedSet.add(`${ev.date}|${ev.class}|${ev.subject}`);
+                });
+            });
+        } catch(e) { /* ignorer les erreurs de pré-chargement */ }
+
+        // Marquer le devoir actuel comme évalué (on vient de l'enregistrer)
+        evaluatedSet.add(`${currentDate}|${currentClass}|${currentSubject}`);
+
+        // Trouver l'index du devoir actuel dans la liste triée
+        const currentIndex = sorted.findIndex(h => h.Jour === currentDate && h.Classe === currentClass && h.Matière === currentSubject);
+
+        // Chercher le prochain devoir non évalué après l'index courant
+        let nextHw = null;
+        for (let i = currentIndex + 1; i < sorted.length; i++) {
+            const hw = sorted[i];
+            const key = `${hw.Jour}|${hw.Classe}|${hw.Matière}`;
+            if (!evaluatedSet.has(key)) {
+                nextHw = hw;
+                break;
+            }
+        }
+
+        // Si pas trouvé après, chercher depuis le début (rotation)
+        if (!nextHw) {
+            for (let i = 0; i < currentIndex; i++) {
+                const hw = sorted[i];
+                const key = `${hw.Jour}|${hw.Classe}|${hw.Matière}`;
+                if (!evaluatedSet.has(key)) {
+                    nextHw = hw;
+                    break;
+                }
+            }
+        }
+
+        if (nextHw) {
+            // Naviguer vers la classe du prochain devoir si nécessaire
+            const nextClass = nextHw.Classe;
+            const classHomeworks = allHw.filter(h => h.Classe === nextClass);
+
+            // Afficher les cartes de la classe du prochain devoir
+            await displayHomeworkCards(teacherName, classHomeworks, nextClass);
+
+            // Sélectionner automatiquement la carte du prochain devoir
+            setTimeout(() => {
+                const teacherDashboardView = document.getElementById('teacher-dashboard-view');
+                const cardsContainer = teacherDashboardView.querySelector('#homework-cards-container');
+                const cards = cardsContainer.querySelectorAll('.homework-card');
+                for (const card of cards) {
+                    if (card.dataset.date === nextHw.Jour && card.dataset.classe === nextHw.Classe && card.dataset.subject === nextHw.Matière) {
+                        cardsContainer.querySelectorAll('.homework-card').forEach(c => c.classList.remove('active'));
+                        card.classList.add('active');
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        renderEvaluationTable(nextHw.Classe, nextHw.Jour, nextHw.Matière, nextHw.Devoirs);
+                        break;
+                    }
+                }
+            }, 200);
+        } else {
+            // Tout est évalué - retour à la liste des semaines avec message
+            const lang = document.documentElement.lang;
+            const msg = lang === 'ar' ? '✅ تم تقييم جميع الواجبات لهذا الأسبوع!' : '✅ Tous les devoirs de cette semaine ont été évalués !';
+            alert(msg);
+            const activeTeacherCard = document.querySelector('.teacher-icon-card.active');
+            if (activeTeacherCard) displayWeekSelector(activeTeacherCard.dataset.teacherName);
         }
     }
     
