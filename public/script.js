@@ -2255,43 +2255,201 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Afficher les évaluations générales dans le dashboard parent
+    // -----------------------------------------------------------------------
+    // ÉVALUATION GÉNÉRALE — diagramme barres verticales + tableau switchable
+    // -----------------------------------------------------------------------
     async function displayGeneralEvaluations(className, studentName) {
-        const evaluationsContainer = document.getElementById('general-evaluations-container');
-        if (!evaluationsContainer) return;
-        
+        const container = document.getElementById('general-evaluations-container');
+        if (!container) return;
+
         try {
             const evaluations = await calculateGeneralEvaluations();
             if (!evaluations) return;
-            
+
             const studentEval = evaluations.find(e => e.classe === className && e.student === studentName);
             if (!studentEval) return;
-            
-            const isPEI1 = className === 'PEI1';
-            const behaviorMax = isPEI1 ? 30 : 20;
-            
-            evaluationsContainer.innerHTML = `
-                <div class="general-eval-card">
-                    <h3>📊 Évaluation Générale (8 dernières semaines)</h3>
-                    <div class="eval-row">
-                        <span class="eval-label">Comportement & Participation :</span>
-                        <span class="eval-score">${studentEval.behaviorScore.toFixed(1)}/${behaviorMax}</span>
-                        <div class="eval-bar">
-                            <div class="eval-fill" style="width: ${(studentEval.behaviorScore / behaviorMax * 100).toFixed(1)}%;"></div>
+
+            const lang = document.documentElement.lang;
+            const t = {
+                fr: {
+                    title:   '📊 Évaluation Générale (8 dernières semaines)',
+                    pb:      'Participation & Comportement',
+                    hw:      'Faisabilité Devoirs',
+                    total:   'Total',
+                    subject: 'Matière',
+                    chart:   'Diagramme',
+                    table:   'Tableau',
+                    toggle:  'Afficher en Tableau',
+                    toggleC: 'Afficher en Diagramme',
+                    noData:  'Aucune donnée disponible'
+                },
+                ar: {
+                    title:   '📊 التقييم العام (8 أسابيع الأخيرة)',
+                    pb:      'المشاركة والسلوك',
+                    hw:      'إنجاز الواجبات',
+                    total:   'المجموع',
+                    subject: 'المادة',
+                    chart:   'مخطط',
+                    table:   'جدول',
+                    toggle:  'عرض كجدول',
+                    toggleC: 'عرض كمخطط',
+                    noData:  'لا توجد بيانات'
+                }
+            };
+            const tx = t[lang] || t.fr;
+
+            // Couleurs distinctes par matière (palette fixe)
+            const PALETTE = [
+                '#6366f1','#f59e0b','#10b981','#ef4444',
+                '#8b5cf6','#06b6d4','#f97316','#ec4899',
+                '#84cc16','#14b8a6'
+            ];
+
+            // Construire la liste des matières triées
+            const subjects = Object.keys(studentEval.subjectScores || {}).sort();
+            const globalPB = studentEval.participationBehaviorScore;
+            const globalHW = studentEval.homeworkScore;
+            const globalTotal = studentEval.totalScore;
+
+            // ---- Render diagramme barres verticales ----
+            function renderChart() {
+                if (!subjects.length) {
+                    return `<p style="text-align:center;opacity:.7">${tx.noData}</p>`;
+                }
+                const BAR_W = 32;   // px largeur d'une barre
+                const BAR_GAP = 8;  // px espace entre barres d'un même groupe
+                const GRP_GAP = 18; // px entre groupes (matières)
+                const CHART_H = 140;// px hauteur zone barres
+                const MAX = 10;
+
+                let bars = '';
+                let labels = '';
+                let legendItems = '';
+                const usedColors = {};
+
+                subjects.forEach((subj, i) => {
+                    const sc = studentEval.subjectScores[subj];
+                    const pb = sc.participationBehaviorScore;
+                    const hw = sc.homeworkScore;
+                    const colorPB = PALETTE[i * 2 % PALETTE.length];
+                    const colorHW = PALETTE[(i * 2 + 1) % PALETTE.length];
+                    usedColors[subj] = { pb: colorPB, hw: colorHW };
+
+                    const hPB = Math.round((pb / MAX) * CHART_H);
+                    const hHW = Math.round((hw / MAX) * CHART_H);
+                    const grpW = BAR_W * 2 + BAR_GAP;
+
+                    bars += `
+                      <div class="gec-group" style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;">
+                        <div style="display:flex;align-items:flex-end;gap:${BAR_GAP}px;height:${CHART_H}px;">
+                          <div class="gec-bar" title="${tx.pb}: ${pb.toFixed(1)}/10"
+                               style="width:${BAR_W}px;height:${hPB}px;background:${colorPB};border-radius:4px 4px 0 0;position:relative;">
+                            <span class="gec-bar-val">${pb.toFixed(1)}</span>
+                          </div>
+                          <div class="gec-bar" title="${tx.hw}: ${hw.toFixed(1)}/10"
+                               style="width:${BAR_W}px;height:${hHW}px;background:${colorHW};border-radius:4px 4px 0 0;position:relative;">
+                            <span class="gec-bar-val">${hw.toFixed(1)}</span>
+                          </div>
                         </div>
-                    </div>
-                    <div class="eval-row">
-                        <span class="eval-label">Faisabilité des Devoirs :</span>
-                        <span class="eval-score">${studentEval.homeworkScore.toFixed(1)}/20</span>
-                        <div class="eval-bar">
-                            <div class="eval-fill" style="width: ${(studentEval.homeworkScore / 20 * 100).toFixed(1)}%;"></div>
+                        <div class="gec-bar-label" style="max-width:${grpW + 8}px;">${subj}</div>
+                      </div>`;
+                });
+
+                // Légende globale (PB / HW)
+                const legendHTML = `
+                  <div class="gec-legend">
+                    <span class="gec-legend-dot" style="background:#6366f1"></span><span>${tx.pb}</span>
+                    <span class="gec-legend-dot" style="background:#f59e0b;margin-left:12px;"></span><span>${tx.hw}</span>
+                  </div>`;
+
+                return `
+                  <div class="gec-chart-wrap">
+                    ${legendHTML}
+                    <div class="gec-chart-scroll">
+                      <div class="gec-y-axis">
+                        ${[10,8,6,4,2,0].map(v=>`<span>${v}</span>`).join('')}
+                      </div>
+                      <div class="gec-bars-area">
+                        <div class="gec-grid-lines">
+                          ${[0,20,40,60,80,100].map(p=>`<div class="gec-grid-line" style="bottom:${p}%"></div>`).join('')}
                         </div>
+                        ${bars}
+                      </div>
                     </div>
-                    <div class="eval-total">
-                        <strong>Total : ${(studentEval.behaviorScore + studentEval.homeworkScore).toFixed(1)}/${behaviorMax + 20}</strong>
+                    <div class="gec-global-summary">
+                      <span>${tx.pb}: <strong>${globalPB.toFixed(1)}/10</strong></span>
+                      <span>${tx.hw}: <strong>${globalHW.toFixed(1)}/10</strong></span>
+                      <span>${tx.total}: <strong>${globalTotal.toFixed(1)}/20</strong></span>
                     </div>
-                </div>
-            `;
+                  </div>`;
+            }
+
+            // ---- Render tableau ----
+            function renderTable() {
+                if (!subjects.length) {
+                    return `<p style="text-align:center;opacity:.7">${tx.noData}</p>`;
+                }
+                let rows = '';
+                subjects.forEach((subj, i) => {
+                    const sc = studentEval.subjectScores[subj];
+                    const pb = sc.participationBehaviorScore;
+                    const hw = sc.homeworkScore;
+                    const tot = Math.min(20, pb + hw);
+                    const color = PALETTE[i % PALETTE.length];
+                    rows += `
+                      <tr>
+                        <td><span class="gec-dot" style="background:${color}"></span>${subj}</td>
+                        <td class="gec-td-num">${pb.toFixed(1)}/10</td>
+                        <td class="gec-td-num">${hw.toFixed(1)}/10</td>
+                        <td class="gec-td-num gec-td-total">${tot.toFixed(1)}/20</td>
+                      </tr>`;
+                });
+                return `
+                  <div class="gec-table-wrap">
+                    <table class="gec-table">
+                      <thead>
+                        <tr>
+                          <th>${tx.subject}</th>
+                          <th>${tx.pb}</th>
+                          <th>${tx.hw}</th>
+                          <th>${tx.total}</th>
+                        </tr>
+                      </thead>
+                      <tbody>${rows}</tbody>
+                      <tfoot>
+                        <tr class="gec-tfoot">
+                          <td>${tx.total}</td>
+                          <td class="gec-td-num">${globalPB.toFixed(1)}/10</td>
+                          <td class="gec-td-num">${globalHW.toFixed(1)}/10</td>
+                          <td class="gec-td-num gec-td-total">${globalTotal.toFixed(1)}/20</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>`;
+            }
+
+            // ---- Assemblage ----
+            let viewMode = 'chart'; // 'chart' | 'table'
+
+            function rebuild() {
+                const inner = viewMode === 'chart' ? renderChart() : renderTable();
+                const btnLabel = viewMode === 'chart' ? tx.toggle : tx.toggleC;
+                container.innerHTML = `
+                  <div class="gec-card">
+                    <div class="gec-header">
+                      <span class="gec-title">${tx.title}</span>
+                      <button class="gec-toggle-btn" id="gec-toggle-btn">${btnLabel}</button>
+                    </div>
+                    <div class="gec-body" id="gec-body">${inner}</div>
+                  </div>`;
+                document.getElementById('gec-toggle-btn').addEventListener('click', () => {
+                    viewMode = viewMode === 'chart' ? 'table' : 'chart';
+                    rebuild();
+                });
+            }
+
+            rebuild();
+
         } catch (error) {
             console.error('Erreur affichage évaluations:', error);
         }

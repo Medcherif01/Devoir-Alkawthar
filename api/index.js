@@ -946,81 +946,94 @@ async function handleGeneralEvaluations(req, res) {
             date: { $gte: eightWeeksAgo.format('YYYY-MM-DD') }
         }).toArray();
         
-        // Grouper par classe et élève
+        // ----------------------------------------------------------------
+        // Grouper par élève ET par matière pour avoir les notes par matière
+        // ----------------------------------------------------------------
         const studentEvaluations = {};
         
         evaluations.forEach(ev => {
-            const key = `${ev.class}_${ev.studentName}`;
-            
+            const key = `${ev.class}|||${ev.studentName}`;
             if (!studentEvaluations[key]) {
                 studentEvaluations[key] = {
                     classe: ev.class,
                     student: ev.studentName,
+                    // Données globales (toutes matières confondues)
                     behaviors: [],
                     participations: [],
-                    statuses: []
+                    statuses: [],
+                    // Données par matière: { 'Maths': { behaviors:[], participations:[], statuses:[] }, ... }
+                    bySubject: {}
                 };
             }
+            const sd = studentEvaluations[key];
             
-            // Ajouter les notes de comportement et participation
-            if (ev.behavior !== undefined && ev.behavior !== null && ev.behavior !== '') {
-                const behaviorNum = parseInt(ev.behavior);
-                if (!isNaN(behaviorNum)) {
-                    studentEvaluations[key].behaviors.push(behaviorNum);
-                }
+            const subj = (ev.subject || '').trim();
+            if (subj && !sd.bySubject[subj]) {
+                sd.bySubject[subj] = { behaviors: [], participations: [], statuses: [] };
             }
             
-            if (ev.participation !== undefined && ev.participation !== null && ev.participation !== '') {
-                const participationNum = parseInt(ev.participation);
-                if (!isNaN(participationNum)) {
-                    studentEvaluations[key].participations.push(participationNum);
-                }
-            }
+            const bNum = parseInt(ev.behavior);
+            const pNum = parseInt(ev.participation);
             
-            // Comptabiliser les statuts des devoirs
+            if (!isNaN(bNum)) {
+                sd.behaviors.push(bNum);
+                if (subj) sd.bySubject[subj].behaviors.push(bNum);
+            }
+            if (!isNaN(pNum)) {
+                sd.participations.push(pNum);
+                if (subj) sd.bySubject[subj].participations.push(pNum);
+            }
             if (ev.status) {
-                studentEvaluations[key].statuses.push(ev.status);
+                sd.statuses.push(ev.status);
+                if (subj) sd.bySubject[subj].statuses.push(ev.status);
             }
         });
         
-        // Calculer les moyennes et scores finaux
-        const results = Object.values(studentEvaluations).map(student => {
-            // Score de comportement et participation (moyenne sur 5, converti sur 20 ou 30)
-            const avgBehavior = student.behaviors.length > 0 
-                ? student.behaviors.reduce((a, b) => a + b, 0) / student.behaviors.length 
-                : 0;
+        // ----------------------------------------------------------------
+        // Fonction utilitaire : calculer les scores pour un groupe d'évals
+        //   participation + comportement → sur 10, max = 10
+        //   faisabilité devoirs          → sur 10, max = 10
+        // ----------------------------------------------------------------
+        function calcScores(behaviors, participations, statuses) {
+            const avgB = behaviors.length > 0
+                ? behaviors.reduce((a, b) => a + b, 0) / behaviors.length : 0;
+            const avgP = participations.length > 0
+                ? participations.reduce((a, b) => a + b, 0) / participations.length : 0;
+
+            // Moyenne comportement + participation (chaque note est sur 10)
+            // → score final sur 10, capé à 10
+            const participationBehaviorScore = Math.min(10, parseFloat(((avgB + avgP) / 2).toFixed(2)));
+
+            // Faisabilité devoirs → sur 10
+            const total = statuses.length;
+            const done = statuses.filter(s => s === 'Fait').length;
+            const partial = statuses.filter(s => s === 'Partiellement Fait').length;
+            const rate = total > 0 ? (done + partial * 0.5) / total : 0;
+            const homeworkScore = Math.min(10, parseFloat((rate * 10).toFixed(2)));
+
+            return { participationBehaviorScore, homeworkScore };
+        }
+        
+        // Calculer les résultats
+        const results = Object.values(studentEvaluations).map(sd => {
+            // Scores globaux
+            const global = calcScores(sd.behaviors, sd.participations, sd.statuses);
             
-            const avgParticipation = student.participations.length > 0
-                ? student.participations.reduce((a, b) => a + b, 0) / student.participations.length
-                : 0;
-            
-            // Moyenne comportement + participation sur 5
-            const avgBehaviorParticipation = (avgBehavior + avgParticipation) / 2;
-            
-            // Convertir selon la classe
-            const isPEI1 = student.classe === 'PEI1';
-            const behaviorMaxScore = isPEI1 ? 30 : 20;
-            const behaviorScore = (avgBehaviorParticipation / 5) * behaviorMaxScore;
-            
-            // Score de faisabilité des devoirs (toujours sur 20)
-            const totalHomeworks = student.statuses.length;
-            const doneHomeworks = student.statuses.filter(s => s === 'Fait').length;
-            const partiallyDone = student.statuses.filter(s => s === 'Partiellement Fait').length;
-            
-            // Calcul: Fait = 100%, Partiellement Fait = 50%, autres = 0%
-            const homeworkRate = totalHomeworks > 0
-                ? ((doneHomeworks + (partiallyDone * 0.5)) / totalHomeworks)
-                : 0;
-            
-            const homeworkScore = homeworkRate * 20;
+            // Scores par matière
+            const subjectScores = {};
+            for (const [subj, data] of Object.entries(sd.bySubject)) {
+                subjectScores[subj] = calcScores(data.behaviors, data.participations, data.statuses);
+            }
             
             return {
-                classe: student.classe,
-                student: student.student,
-                behaviorScore: parseFloat(behaviorScore.toFixed(2)),
-                homeworkScore: parseFloat(homeworkScore.toFixed(2)),
-                totalScore: parseFloat((behaviorScore + homeworkScore).toFixed(2)),
-                isPEI1
+                classe: sd.classe,
+                student: sd.student,
+                // Scores globaux (sur 10 chacun)
+                participationBehaviorScore: global.participationBehaviorScore,
+                homeworkScore: global.homeworkScore,
+                totalScore: parseFloat((global.participationBehaviorScore + global.homeworkScore).toFixed(2)),
+                // Scores par matière
+                subjectScores
             };
         });
         
