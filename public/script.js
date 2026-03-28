@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let currentDate = moment();
+    let currentDate = getNearestSchoolDay(moment());
     let teacherPlanData = [];
     let currentTeacherContext = {
         teacherName: null,
@@ -72,6 +72,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayOfWeek = moment.utc(dateStr, 'YYYY-MM-DD').day();
         // 0=dimanche, 1=lundi, 2=mardi, 3=mercredi, 4=jeudi
         return dayOfWeek >= 0 && dayOfWeek <= 4;
+    }
+
+    /**
+     * Trouve le jour scolaire le plus proche d'une date donnée.
+     * Si la date est un jour scolaire, la retourne telle quelle.
+     * Sinon cherche d'abord le jour précédent, puis suivant.
+     */
+    function getNearestSchoolDay(date) {
+        const d = date.clone();
+        const dateStr = d.format('YYYY-MM-DD');
+        if (isSchoolDate(dateStr)) return d;
+
+        // Chercher dans les 30 jours précédents
+        for (let i = 1; i <= 30; i++) {
+            const prev = d.clone().subtract(i, 'days');
+            if (isSchoolDate(prev.format('YYYY-MM-DD'))) return prev;
+        }
+        // Chercher dans les 30 jours suivants
+        for (let i = 1; i <= 30; i++) {
+            const next = d.clone().add(i, 'days');
+            if (isSchoolDate(next.format('YYYY-MM-DD'))) return next;
+        }
+        return d; // fallback (ne devrait pas arriver)
+    }
+
+    /**
+     * Avance d'un jour scolaire (en ignorant vacances + vendredi/samedi).
+     */
+    function nextSchoolDay(date) {
+        let d = date.clone().add(1, 'days');
+        for (let i = 0; i < 60; i++) {
+            if (isSchoolDate(d.format('YYYY-MM-DD'))) return d;
+            d.add(1, 'days');
+        }
+        return date; // fallback
+    }
+
+    /**
+     * Recule d'un jour scolaire (en ignorant vacances + vendredi/samedi).
+     */
+    function prevSchoolDay(date) {
+        let d = date.clone().subtract(1, 'days');
+        for (let i = 0; i < 60; i++) {
+            if (isSchoolDate(d.format('YYYY-MM-DD'))) return d;
+            d.subtract(1, 'days');
+        }
+        return date; // fallback
     }
 
 
@@ -335,7 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'student-card';
             card.innerHTML = `<img src="${student.photo}" alt="Photo de ${student.name}"><p>${student.name}</p>`;
             card.addEventListener('click', () => {
-                currentDate = moment();
+                // Utiliser le jour scolaire le plus proche (ignorer vacances/fériés)
+                currentDate = getNearestSchoolDay(moment());
                 loadStudentDashboard(className, student.name, currentDate);
                 showView('student-dashboard-view');
             });
@@ -875,13 +923,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const className = studentDashboardView.dataset.className;
         const studentName = studentDashboardView.dataset.studentName;
         if (className && studentName) {
-            currentDate.subtract(1, 'days');
-            if (currentDate.day() === 6) {
-                currentDate.subtract(1, 'days');
-            }
-            if (currentDate.day() === 5) {
-                currentDate.subtract(1, 'days');
-            }
+            // Utiliser le calendrier scolaire officiel pour ignorer vacances + ven/sam
+            currentDate = prevSchoolDay(currentDate);
             loadStudentDashboard(className, studentName, currentDate); 
         }
     });
@@ -891,13 +934,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const className = studentDashboardView.dataset.className;
         const studentName = studentDashboardView.dataset.studentName;
         if (className && studentName) {
-            currentDate.add(1, 'days');
-            if (currentDate.day() === 5) {
-                currentDate.add(2, 'days');
-            }
-            if (currentDate.day() === 6) {
-                currentDate.add(1, 'days');
-            }
+            // Utiliser le calendrier scolaire officiel pour ignorer vacances + ven/sam
+            currentDate = nextSchoolDay(currentDate);
             loadStudentDashboard(className, studentName, currentDate); 
         }
     });
@@ -920,17 +958,16 @@ document.addEventListener('DOMContentLoaded', () => {
             studentPhotoElement.alt = `Photo de ${studentName}`;
         }
         try {
-            // Si vendredi (5) ou samedi (6), utiliser les devoirs de jeudi (4)
+            // S'assurer que la date est un jour scolaire valide (calendrier officiel)
             let queryDate = date.clone();
-            const dayOfWeek = queryDate.day();
-            if (dayOfWeek === 5 || dayOfWeek === 6) {
-                // Trouver le jeudi précédent
-                const daysToSubtract = dayOfWeek === 5 ? 1 : 2;
-                queryDate = queryDate.subtract(daysToSubtract, 'days');
-                
-                // Mettre à jour l'affichage pour indiquer qu'on montre les devoirs de jeudi
-                const thursdayText = currentLang === 'ar' ? 'واجبات الخميس' : 'Devoirs du jeudi';
-                homeworkDateElement.textContent = `${thursdayText} ${queryDate.clone().locale(currentLang).format('D MMMM YYYY')}`;
+            const dateStr = queryDate.format('YYYY-MM-DD');
+            if (!isSchoolDate(dateStr)) {
+                // Ce n'est pas un jour scolaire - chercher le jour scolaire précédent
+                queryDate = prevSchoolDay(queryDate);
+                const schoolDateMsg = currentLang === 'ar'
+                    ? 'واجبات يوم ' + queryDate.clone().locale(currentLang).format('dddd D MMMM YYYY')
+                    : 'Devoirs du ' + queryDate.clone().locale(currentLang).format('dddd D MMMM YYYY');
+                homeworkDateElement.textContent = schoolDateMsg;
             }
             
             const dateQuery = queryDate.locale('en').format('YYYY-MM-DD');

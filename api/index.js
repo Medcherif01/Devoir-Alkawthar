@@ -949,13 +949,13 @@ async function handleGeneralEvaluations(req, res) {
         // Grouper par classe et élève
         const studentEvaluations = {};
         
-        evaluations.forEach(eval => {
-            const key = `${eval.className}_${eval.studentName}`;
+        evaluations.forEach(ev => {
+            const key = `${ev.class}_${ev.studentName}`;
             
             if (!studentEvaluations[key]) {
                 studentEvaluations[key] = {
-                    classe: eval.className,
-                    student: eval.studentName,
+                    classe: ev.class,
+                    student: ev.studentName,
                     behaviors: [],
                     participations: [],
                     statuses: []
@@ -963,23 +963,23 @@ async function handleGeneralEvaluations(req, res) {
             }
             
             // Ajouter les notes de comportement et participation
-            if (eval.behavior !== undefined && eval.behavior !== null && eval.behavior !== '') {
-                const behaviorNum = parseInt(eval.behavior);
+            if (ev.behavior !== undefined && ev.behavior !== null && ev.behavior !== '') {
+                const behaviorNum = parseInt(ev.behavior);
                 if (!isNaN(behaviorNum)) {
                     studentEvaluations[key].behaviors.push(behaviorNum);
                 }
             }
             
-            if (eval.participation !== undefined && eval.participation !== null && eval.participation !== '') {
-                const participationNum = parseInt(eval.participation);
+            if (ev.participation !== undefined && ev.participation !== null && ev.participation !== '') {
+                const participationNum = parseInt(ev.participation);
                 if (!isNaN(participationNum)) {
                     studentEvaluations[key].participations.push(participationNum);
                 }
             }
             
             // Comptabiliser les statuts des devoirs
-            if (eval.status) {
-                studentEvaluations[key].statuses.push(eval.status);
+            if (ev.status) {
+                studentEvaluations[key].statuses.push(ev.status);
             }
         });
         
