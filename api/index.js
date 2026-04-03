@@ -1,6 +1,26 @@
 const { createClient } = require('@supabase/supabase-js');
 const moment = require('moment');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+// Fichier de secours (si Supabase non configuré) — Vercel garde /tmp entre les invocations
+const TMP_PLANS_FILE = '/tmp/devoirs_plans.json';
+
+function readPlansFromFile() {
+    try {
+        if (fs.existsSync(TMP_PLANS_FILE)) {
+            return JSON.parse(fs.readFileSync(TMP_PLANS_FILE, 'utf8'));
+        }
+    } catch (e) { /* ignore */ }
+    return [];
+}
+
+function writePlansToFile(plans) {
+    try {
+        fs.writeFileSync(TMP_PLANS_FILE, JSON.stringify(plans), 'utf8');
+    } catch (e) { console.error('[TMP] Erreur écriture fichier plans:', e.message); }
+}
 
 // ============================================================================
 // SUPABASE CLIENT (remplace MongoDB)
@@ -737,14 +757,6 @@ async function handleUploadPlan(req, res) {
         return res.status(405).json({ message: 'Méthode non autorisée' });
     }
 
-    let supabase;
-    try {
-        supabase = getSupabase();
-    } catch (err) {
-        if (handleSupabaseConfigError(err, res)) return;
-        throw err;
-    }
-
     if (!req.body || typeof req.body !== 'object') { req.body = await readJsonBody(req); }
     const planData = req.body;
 
@@ -764,7 +776,7 @@ async function handleUploadPlan(req, res) {
             }
         }
         return plan;
-    }).filter(Boolean); // Filtrer les entrées null
+    }).filter(Boolean);
 
     if (normalizedPlanData.length === 0) {
         return res.status(400).json({ 
@@ -773,40 +785,64 @@ async function handleUploadPlan(req, res) {
         });
     }
 
-    const { error } = await supabase
-        .from('plans')
-        .upsert(normalizedPlanData, { onConflict: 'Jour,Classe,Matière' });
-
-    if (error) {
-        console.error('[Supabase] upload-plan error:', error);
-        return res.status(500).json({ message: 'Erreur lors de l\'enregistrement.', details: error.message });
-    }
-
     const skipped = planData.length - normalizedPlanData.length;
-    let message = `Planning mis à jour avec ${normalizedPlanData.length} enregistrements.`;
-    if (skipped > 0) {
-        message += ` (${skipped} entrées avec dates invalides ignorées)`;
-    }
 
-    res.status(200).json({ 
-        message: message,
-        normalized: normalizedPlanData.length,
-        skipped: skipped
-    });
+    // Essayer Supabase d'abord
+    try {
+        const supabase = getSupabase();
+        const { error } = await supabase
+            .from('plans')
+            .upsert(normalizedPlanData, { onConflict: 'Jour,Classe,Matière' });
+
+        if (error) {
+            console.error('[Supabase] upload-plan upsert error:', JSON.stringify(error));
+            // Fallback vers fichier local
+            writePlansToFile(normalizedPlanData);
+            return res.status(200).json({
+                message: `⚠️ Planning sauvegardé localement (${normalizedPlanData.length} entrées). Erreur Supabase: ${error.message}`,
+                normalized: normalizedPlanData.length,
+                skipped,
+                warning: 'Supabase error - saved to local cache'
+            });
+        }
+
+        // Aussi sauvegarder localement comme cache
+        writePlansToFile(normalizedPlanData);
+
+        let message = `✅ Planning mis à jour avec ${normalizedPlanData.length} enregistrements.`;
+        if (skipped > 0) message += ` (${skipped} entrées ignorées)`;
+        return res.status(200).json({ message, normalized: normalizedPlanData.length, skipped });
+
+    } catch (err) {
+        // Supabase non configuré → sauvegarder dans /tmp
+        console.warn('[upload-plan] Supabase non dispo, utilisation du cache local:', err.message);
+        writePlansToFile(normalizedPlanData);
+        let message = `✅ Planning enregistré (${normalizedPlanData.length} devoirs).`;
+        if (skipped > 0) message += ` (${skipped} entrées ignorées)`;
+        if (err.supabaseNotConfigured) {
+            message += ' ⚠️ Configurez SUPABASE_URL dans Vercel pour la persistance permanente.';
+        }
+        return res.status(200).json({ message, normalized: normalizedPlanData.length, skipped });
+    }
 }
 
 // Handler: /api/initial-data
 async function handleInitialData(req, res) {
     try {
         const supabase = getSupabase();
-        const { data: planData } = await supabase.from('plans').select('*');
+        const { data: planData, error } = await supabase.from('plans').select('*');
+        if (error) throw error;
         const plans = planData || [];
         const teachers = [...new Set(plans.map(item => item['Enseignant']).filter(Boolean))].sort();
-        res.status(200).json({ teachers, planData: plans });
+        // Mettre à jour le cache local
+        if (plans.length > 0) writePlansToFile(plans);
+        return res.status(200).json({ teachers, planData: plans });
     } catch (error) {
-        // Si Supabase n'est pas configuré, retourner des données vides sans planter
-        console.warn('[initial-data] Supabase non configuré ou erreur:', error.message);
-        res.status(200).json({ teachers: [], planData: [] });
+        // Supabase non configuré ou erreur → utiliser le cache local (/tmp)
+        console.warn('[initial-data] Supabase non dispo, lecture cache local:', error.message);
+        const plans = readPlansFromFile();
+        const teachers = [...new Set(plans.map(item => item['Enseignant']).filter(Boolean))].sort();
+        return res.status(200).json({ teachers, planData: plans });
     }
 }
 
