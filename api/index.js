@@ -31,7 +31,11 @@ function getSupabase() {
     if (supabaseClient) return supabaseClient;
 
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    // Support anciens ET nouveaux formats de clés Supabase
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY   // ancienne clé service_role
+           || process.env.SUPABASE_SECRET_KEY            // nouvelle clé sb_secret_...
+           || process.env.SUPABASE_ANON_KEY              // clé anon (legacy)
+           || process.env.SUPABASE_KEY;                  // variable générique
 
     if (!url || !key) {
         const err = new Error('SUPABASE_NOT_CONFIGURED');
@@ -52,7 +56,7 @@ function handleSupabaseConfigError(error, res) {
     if (error && error.supabaseNotConfigured) {
         res.status(503).json({
             error: 'Base de données non configurée.',
-            message: 'Veuillez ajouter SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans les variables d\'environnement Vercel.',
+            message: 'Veuillez ajouter SUPABASE_URL et SUPABASE_SECRET_KEY dans les variables d\'environnement Vercel.',
             tip: 'Voir le fichier supabase_setup.sql pour créer les tables.'
         });
         return true;
