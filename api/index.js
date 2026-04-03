@@ -772,11 +772,17 @@ async function handleUploadPlan(req, res) {
 
 // Handler: /api/initial-data
 async function handleInitialData(req, res) {
-    const supabase = getSupabase();
-    const { data: planData } = await supabase.from('plans').select('*');
-    const plans = planData || [];
-    const teachers = [...new Set(plans.map(item => item['Enseignant']).filter(Boolean))].sort();
-    res.status(200).json({ teachers, planData: plans });
+    try {
+        const supabase = getSupabase();
+        const { data: planData } = await supabase.from('plans').select('*');
+        const plans = planData || [];
+        const teachers = [...new Set(plans.map(item => item['Enseignant']).filter(Boolean))].sort();
+        res.status(200).json({ teachers, planData: plans });
+    } catch (error) {
+        // Si Supabase n'est pas configuré, retourner des données vides sans planter
+        console.warn('[initial-data] Supabase non configuré ou erreur:', error.message);
+        res.status(200).json({ teachers: [], planData: [] });
+    }
 }
 
 // Handler: /api/send-message
