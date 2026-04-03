@@ -419,12 +419,17 @@ document.addEventListener('DOMContentLoaded', () => {
             submitPhoto3Btn.addEventListener('click', handleSubmitPhoto3);
         }
         
+        // Les sections admin (upload + photos) sont déjà affichées ci-dessus.
+        // On charge ensuite les données de planning de façon NON bloquante.
         try {
             if (teacherPlanData.length === 0) {
                 const response = await fetch('/api/initial-data');
-                if (!response.ok) throw new Error('Impossible de charger les listes.');
-                const initialData = await response.json();
-                teacherPlanData = initialData.planData;
+                if (response.ok) {
+                    const initialData = await response.json();
+                    teacherPlanData = initialData.planData || [];
+                } else {
+                    teacherPlanData = [];
+                }
             }
             
             // Si un enseignant sp\u00e9cifique est connect\u00e9
@@ -449,8 +454,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (messagesContainer) messagesContainer.style.display = 'none';
             }
         } catch (error) {
+            // En cas d'erreur réseau, on affiche quand même les sections admin
             console.error(error);
-            teacherDashboardView.querySelector('#homework-cards-container').innerHTML = `<p class="error-message">${translations[document.documentElement.lang].fetchError}.</p>`;
+            teacherIconsContainer.style.display = 'flex';
+            teacherSelectTitle.style.display = 'block';
         }
     }
     
@@ -868,7 +875,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (formattedPlan.length === 0) throw new Error("Aucune donnée valide trouvée.");
                 uploadStatus.textContent = `Fichier lu. ${formattedPlan.length} devoirs trouvés. Envoi en cours...`;
                 const response = await fetch('/api/upload-plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formattedPlan) });
-                if (!response.ok) { const errorResult = await response.json(); throw new Error(`Erreur du serveur (statut ${response.status}). ${errorResult.message || ''}`); }
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    if (response.status === 503) {
+                        throw new Error('Base de données Supabase non configurée. Veuillez ajouter SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans Vercel.');
+                    }
+                    throw new Error(`Erreur du serveur (statut ${response.status}). ${errorResult.message || ''}`);
+                }
                 const result = await response.json();
                 uploadStatus.textContent = result.message;
                 uploadStatus.className = 'success';

@@ -14,11 +14,30 @@ function getSupabase() {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-        throw new Error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel Environment Variables.');
+        const err = new Error('SUPABASE_NOT_CONFIGURED');
+        err.supabaseNotConfigured = true;
+        throw err;
     }
 
     supabaseClient = createClient(url, key);
     return supabaseClient;
+}
+
+/**
+ * Vérifie si l'erreur vient d'une config Supabase manquante
+ * et répond avec un message clair (503) si c'est le cas.
+ * Retourne true si l'erreur a été gérée.
+ */
+function handleSupabaseConfigError(error, res) {
+    if (error && error.supabaseNotConfigured) {
+        res.status(503).json({
+            error: 'Base de données non configurée.',
+            message: 'Veuillez ajouter SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans les variables d\'environnement Vercel.',
+            tip: 'Voir le fichier supabase_setup.sql pour créer les tables.'
+        });
+        return true;
+    }
+    return false;
 }
 
 // ============================================================================
@@ -718,7 +737,13 @@ async function handleUploadPlan(req, res) {
         return res.status(405).json({ message: 'Méthode non autorisée' });
     }
 
-    const supabase = getSupabase();
+    let supabase;
+    try {
+        supabase = getSupabase();
+    } catch (err) {
+        if (handleSupabaseConfigError(err, res)) return;
+        throw err;
+    }
 
     if (!req.body || typeof req.body !== 'object') { req.body = await readJsonBody(req); }
     const planData = req.body;
@@ -1301,14 +1326,11 @@ async function handleGetConversation(req, res) {
 // ============================================================================
 module.exports = async (req, res) => {
     try {
-        // Parse l'URL pour déterminer la route
-        const url = new URL(req.url, `http://${req.headers.host}`);
+        // Parse l'URL pour déterminer la route (WHATWG URL API - pas de url.parse)
+        const rawUrl = req.url || '/';
+        const baseUrl = `https://${req.headers.host || 'localhost'}`;
+        const url = new URL(rawUrl, baseUrl);
         const pathname = url.pathname;
-
-        // Assurer la présence de req.query (certains runtimes ne le remplissent pas)
-        if (!req.query) {
-            req.query = Object.fromEntries(url.searchParams.entries());
-        }
 
         // Assurer la présence de req.query (certains runtimes ne le remplissent pas)
         if (!req.query) {
@@ -1392,6 +1414,7 @@ module.exports = async (req, res) => {
         }
 
     } catch (error) {
+        if (handleSupabaseConfigError(error, res)) return;
         console.error("[API] ERREUR:", error);
         res.status(500).json({ error: 'Erreur interne du serveur.', details: error.message });
     }
