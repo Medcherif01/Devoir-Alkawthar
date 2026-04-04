@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS plans (
     "Matière" TEXT NOT NULL,
     "Enseignant" TEXT,
     "Devoirs" TEXT,
+    "Période" TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE("Jour", "Classe", "Matière")
 );
@@ -123,6 +124,19 @@ CREATE TABLE IF NOT EXISTS parent_accounts (
     "lastLogin" TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================================================
+-- MIGRATION : Ajouter les colonnes manquantes si la table existe déjà
+-- (sans erreur si la colonne existe déjà)
+-- ============================================================================
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='plans' AND column_name='Période'
+    ) THEN
+        ALTER TABLE plans ADD COLUMN "Période" TEXT;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- POLITIQUE RLS (Row Level Security) - Désactivée pour l'API côté serveur

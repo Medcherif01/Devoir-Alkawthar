@@ -768,12 +768,23 @@ async function handleUploadPlan(req, res) {
         return res.status(400).json({ message: 'Aucune donnée à enregistrer.' });
     }
 
-    // 🌍 NORMALISATION AUTOMATIQUE DES DATES lors de l'upload
+    // Colonnes autorisées dans la table plans (tout le reste est ignoré)
+    const ALLOWED_COLUMNS = ['Jour', 'Classe', 'Matière', 'Enseignant', 'Devoirs', 'Période'];
+
+    // 🌍 NORMALISATION AUTOMATIQUE DES DATES + filtrage des colonnes
     const normalizedPlanData = planData.map(plan => {
         if (plan.Jour) {
             const normalizedDate = parseUniversalDate(plan.Jour);
             if (normalizedDate) {
-                return { ...plan, Jour: normalizedDate };
+                // Garder seulement les colonnes connues + normaliser la date
+                const cleanPlan = {};
+                for (const col of ALLOWED_COLUMNS) {
+                    if (plan[col] !== undefined && plan[col] !== null && plan[col] !== '') {
+                        cleanPlan[col] = plan[col];
+                    }
+                }
+                cleanPlan['Jour'] = normalizedDate;
+                return cleanPlan;
             } else {
                 console.warn(`⚠️ Date non parsable ignorée : "${plan.Jour}"`);
                 return null;
