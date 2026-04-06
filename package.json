@@ -1,8 +1,0 @@
-{
-  "name": "devoirs-app",
-  "version": "3.0.0",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "moment": "^2.29.4"
-  }
-}
