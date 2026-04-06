@@ -1,0 +1,8 @@
+{
+  "name": "devoirs-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "mongodb": "^6.5.0",
+    "moment": "^2.29.4"
+  }
+}
