@@ -157,11 +157,11 @@ document.addEventListener('DOMContentLoaded', () => {
             username: 'Sylvano',
             password: 'Sylvano'
         },
-        'Saeed': { 
-            photo: 'https://lh3.googleusercontent.com/d/1c8ERLl7HjPQ3J9FcwfWdhgZwDE2Mnd07',
+        'Imad': { 
+            photo: 'https://https://lh3.googleusercontent.com/d/1DZlsEE7ZnhlVhthsj_QoWGwbsgE_4-n3',
             subjects: ['Arabe'],
-            username: 'Saeed',
-            password: 'Saeed'
+            username: 'Imad',
+            password: 'Imad'
         },
         'Majed': { 
             photo: 'https://lh3.googleusercontent.com/d/18XVdbTXR7o2us4c2CA8_kwsjWeTtb-mT',
