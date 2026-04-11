@@ -468,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Kamel': 'https://lh3.googleusercontent.com/d/1jT3WJBugZUy5wDgmU00_THVD8hZ-5M24',
             'Youssouf': 'https://lh3.googleusercontent.com/d/1Z9CCqVaICs4EePq8NwdqbpD54f8LPkhb',
             'Mohamed Cherif': 'https://lh3.googleusercontent.com/d/1hK0nUo30IxhYA6NuZ8CPxRA6K1Ge6pD6',
+            'Imad': 'https://lh3.googleusercontent.com/d/1DZlsEE7ZnhlVhthsj_QoWGwbsgE_4-n3',
             'Jaber': 'https://lh3.googleusercontent.com/d/1IWFNGE6CkFzAOtlHJqDsFhKcobb8Q0S_'
         };
         (teachers || []).forEach(teacherName => {
