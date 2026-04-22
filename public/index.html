@@ -68,22 +68,31 @@
                 <div class="teacher-contact-section">
                     <h2 class="section-title" data-translate="contactTeachersTitle">📧 Contacter les Enseignants</h2>
                     
-                    <!-- Badge de notification parent -->
-                    <div id="parent-notification-badge" style="display: none; margin: 15px 0; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; cursor: pointer;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 24px;">🔔</span>
-                            <div>
-                                <strong>Vous avez <span id="parent-unread-count">0</span> nouvelle(s) réponse(s)</strong>
-                                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #92400e;">Cliquez pour voir vos messages</p>
+                    <!-- Barre d'actions parent connecté -->
+                    <div id="parent-actions-bar" style="display: none; margin: 15px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <!-- Badge de notification parent -->
+                        <div id="parent-notification-badge" style="display: none; flex: 1; min-width: 200px; padding: 12px 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 10px; cursor: pointer; transition: all 0.2s;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 22px;">🔔</span>
+                                <div>
+                                    <strong style="color: #92400e;">Vous avez <span id="parent-unread-count">0</span> nouvelle(s) réponse(s)</strong>
+                                    <p style="margin: 3px 0 0 0; font-size: 0.85em; color: #92400e;">Cliquez pour voir vos conversations</p>
+                                </div>
                             </div>
                         </div>
+                        <!-- Bouton voir mes conversations (toujours visible si connecté) -->
+                        <button id="view-my-conversations-btn" style="display: none; padding: 12px 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(102,126,234,0.3); transition: all 0.2s;">
+                            💬 Mes conversations
+                        </button>
                     </div>
                     
-                    <!-- Historique des messages parent -->
+                    <!-- Historique / Chat des messages parent -->
                     <div id="parent-messages-history" style="display: none; margin: 20px 0;">
-                        <h3 style="margin-bottom: 15px;">📬 Historique de vos messages</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">💬 Mes conversations avec les enseignants</h3>
+                            <button id="close-messages-history" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✕ Fermer</button>
+                        </div>
                         <div id="parent-messages-list"></div>
-                        <button id="close-messages-history" class="role-button" style="margin-top: 15px; background: #6b7280;">Fermer</button>
                     </div>
                     
                     <div id="teachers-contact-grid" class="teachers-contact-grid"></div>

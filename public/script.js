@@ -127,8 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         PEI1: [ { name: "Faysal", photo: "https://lh3.googleusercontent.com/d/1IB6BKROX3TRxaIIHVVVWbB7-Ii-V8VrC", birthday: "4/2014" }, { name: "Bilal", photo: "https://lh3.googleusercontent.com/d/1B0QUZJhpSad5Fs3qRTugUe4oyTlUDEVu", birthday: "2/2015" }, { name: "Jad", photo: "https://lh3.googleusercontent.com/d/1VLvrWjeJwaClf4pSaLiwjnS79N-HrsFr", birthday: "8/2014" }, { name: "Manaf", photo: "https://lh3.googleusercontent.com/d/1h46Tqtqcp5tNqdY62wV6pyZFYknCEMWY", birthday: "8/2014" } ],
         PEI2: [ { name: "Ahmed", photo: "https://lh3.googleusercontent.com/d/1cDF-yegSB2tqsWac0AoNttbi8qAALYT1", birthday: "9/2013" }, { name: "Yasser", photo: "https://lh3.googleusercontent.com/d/1DthaZcLUhfkkxbvaTr4o4XJENIM6ZNsz", birthday: "8/2013" }, { name: "Eyad", photo: "https://lh3.googleusercontent.com/d/1HGyWS4cC1jWWD25Ah3WcT_eIbUHqFzJ1", birthday: "4/2013" }, { name: "Ali", photo: "https://lh3.googleusercontent.com/d/18QAEYQWVI2HgQf9Kl_8eJ91cjE-Rjg40", birthday: "4/2013" } ],
         PEI3: [ { name: "Seifeddine", photo: "https://lh3.googleusercontent.com/d/1tWdPSbtCAsTMB86WzDgqh3Xw01ahm9s6", birthday: "1/2012" }, { name: "Mohamed", photo: "https://lh3.googleusercontent.com/d/1lB8ObGOvQDVT6FITL2y7C5TYmAGyggFn", birthday: "11/2011" }, { name: "Wajih", photo: "https://lh3.googleusercontent.com/d/1MH6M05mQamOHevmDffVFNpSFNnxqbxs3", birthday: "6/2012" }, { name: "Ahmad", photo: "https://lh3.googleusercontent.com/d/1zU-jBuAbYjHanzank9C1BAd00skS1Y5J", birthday: "2/2012" }, { name: "Adam", photo: "https://lh3.googleusercontent.com/d/15I9p6VSnn1yVmPxRRbGsUkM-fsBKYOWF", birthday: "12/2012" } ],
-        PEI4: [ { name: "Mohamed Younes", photo: "https://lh3.googleusercontent.com/d/1ok8M9EOY71ScKuaW0mHfKUErjKZ4wbe1", birthday: "11/2011" }, { name: "Mohamed Amine", photo: "https://lh3.googleusercontent.com/d/1UrBw6guz0oBTUy8COGeewIs3XAK773bR", birthday: "12/2012" }, { name: "Samir", photo: "https://lh3.googleusercontent.com/d/1NdaCH8CU0DJFHXw4D0lItP-QnCswl23b", birthday: "12/2012" }, { name: "Abdulrahman", photo: "https://lh3.googleusercontent.com/d/1yCTO5StU2tnPY0BEynnWzUveljMIUcLE", birthday: "4/2012" }, { name: "Youssef", photo: "https://lh3.googleusercontent.com/d/1Bygg5-PYrjjMOZdI5hAe16eZ8ltn772e", birthday: "11/2011" } ],
-        DP2: [ { name: "Habib", photo: "https://lh3.googleusercontent.com/d/13u4y6JIyCBVQ_9PCwYhh837byyK9g8pF", birthday: "10/2008" }, { name: "Salah", photo: "https://lh3.googleusercontent.com/d/1IG8S_i6jD8O6C2QD_nwLxrG932QgIVXu", birthday: "7/2008" } ]
+        PEI4: [ { name: "Mohamed Younes", photo: "https://lh3.googleusercontent.com/d/1ok8M9EOY71ScKuaW0mHfKUErjKZ4wbe1", birthday: "11/2011" }, { name: "Mohamed Amine", photo: "https://lh3.googleusercontent.com/d/1UrBw6guz0oBTUy8COGeewIs3XAK773bR", birthday: "12/2012" }, { name: "Samir", photo: "https://lh3.googleusercontent.com/d/1NdaCH8CU0DJFHXw4D0lItP-QnCswl23b", birthday: "12/2012" }, { name: "Abdulrahman", photo: "https://lh3.googleusercontent.com/d/1yCTO5StU2tnPY0BEynnWzUveljMIUcLE", birthday: "4/2012" }, { name: "Youssef", photo: "https://lh3.googleusercontent.com/d/1Bygg5-PYrjjMOZdI5hAe16eZ8ltn772e", birthday: "11/2011" } ]
     };
     
     // DONNÉES DES ENSEIGNANTS - Défini avant toute utilisation
@@ -432,11 +431,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 teacherIconsContainer.style.display = 'none';
                 teacherSelectTitle.style.display = 'none';
                 
-                // Afficher bo\u00eete de r\u00e9ception
-                if (messagesContainer) {
-                    messagesContainer.style.display = 'block';
-                    loadTeacherMessages(specificTeacherName);
+                // Afficher le bouton Messages dans le header avec compteur
+                const viewMessagesBtn = document.getElementById('view-messages-btn');
+                if (viewMessagesBtn) {
+                    viewMessagesBtn.style.display = 'flex';
+                    viewMessagesBtn.dataset.teacherName = specificTeacherName;
                 }
+                updateUnreadCount(specificTeacherName);
+                
+                // Masquer la boite de réception inline (on utilise le bouton header)
+                if (messagesContainer) messagesContainer.style.display = 'none';
                 
                 // Afficher directement les devoirs de cet enseignant
                 displayWeekSelector(specificTeacherName);
@@ -447,6 +451,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 teacherIconsContainer.style.display = 'flex';
                 teacherSelectTitle.style.display = 'block';
                 if (messagesContainer) messagesContainer.style.display = 'none';
+                
+                // Afficher le bouton Messages pour admin (voir tous les messages)
+                const viewMessagesBtn = document.getElementById('view-messages-btn');
+                if (viewMessagesBtn) {
+                    viewMessagesBtn.style.display = 'flex';
+                    viewMessagesBtn.dataset.teacherName = 'all';
+                }
             }
         } catch (error) {
             console.error(error);
@@ -1789,60 +1800,107 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // View messages button (for teachers)
     document.getElementById('view-messages-btn')?.addEventListener('click', () => {
-        loadTeacherMessages();
+        const btn = document.getElementById('view-messages-btn');
+        const teacherName = btn.dataset.teacherName || 'all';
+        loadTeacherMessagesView(teacherName);
         showView('teacher-messages-view');
     });
     
-    // Load teacher messages
-    async function loadTeacherMessages() {
+    // Load teacher messages - vue dédiée (bouton header)
+    async function loadTeacherMessagesView(teacherName) {
         const savedLogin = checkSavedLogin();
         if (!savedLogin) return;
         
         const messagesContainer = document.getElementById('messages-container');
         messagesContainer.innerHTML = '<p>Chargement des messages...</p>';
         
+        const lang = document.documentElement.lang;
+        
         try {
-            // Get teacher name from active card or saved login
-            const activeTeacherCard = document.querySelector('.teacher-icon-card.active');
-            const teacherName = activeTeacherCard ? activeTeacherCard.dataset.teacherName : null;
-            
             const response = await fetch(`/api/get-messages?teacherName=${encodeURIComponent(teacherName || 'all')}`);
             if (!response.ok) throw new Error('Erreur de chargement');
             
-            const data = await response.json();
+            const messages = await response.json();
+            const msgArray = Array.isArray(messages) ? messages : [];
             
-            if (data.messages.length === 0) {
-                messagesContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Aucun message pour le moment.</p>';
+            if (msgArray.length === 0) {
+                messagesContainer.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 30px;">Aucun message pour le moment.</p>';
                 return;
             }
             
             messagesContainer.innerHTML = '';
-            data.messages.forEach(msg => {
+            
+            for (const msg of msgArray) {
                 const card = document.createElement('div');
                 card.className = `message-card ${msg.read ? '' : 'unread'}`;
+                card.style.cssText = 'background: white; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid ' + (msg.read ? '#e5e7eb' : '#667eea') + ';';
+                
+                // En-tête du message
                 card.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-from">De: ${msg.parentName}</span>
-                        <span class="message-date">${new Date(msg.timestamp).toLocaleString('fr-FR')}</span>
+                    <div class="message-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span class="message-from" style="font-weight: 700; color: #1f2937; font-size: 1rem;">👤 ${msg.parentName}</span>
+                            ${msg.parentPhone ? `<span style="margin-left: 10px; color: #6b7280; font-size: 0.9em;">📞 ${msg.parentPhone}</span>` : ''}
+                        </div>
+                        <span class="message-date" style="font-size: 0.85em; color: #9ca3af;">${new Date(msg.date || msg.createdAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'fr-FR')}</span>
                     </div>
-                    <div class="message-content">${msg.message}</div>
+                    <div class="message-content" style="background: #f9fafb; padding: 14px; border-radius: 8px; color: #374151; line-height: 1.6; margin-bottom: 14px;">${msg.message}</div>
+                    <div id="replies-view-${msg._id}" style="margin-bottom: 12px;"></div>
+                    <button onclick="openReplyModal('${msg._id}', '${msg.parentName}', '${msg.parentPhone || ''}', '${msg.teacherName}')" 
+                        style="padding: 8px 18px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                        💬 ${lang === 'ar' ? 'الرد' : 'Répondre'}
+                    </button>
                 `;
                 messagesContainer.appendChild(card);
-            });
+                
+                // Charger les réponses existantes pour ce message
+                await loadRepliesInView(msg._id, `replies-view-${msg._id}`, lang);
+            }
             
-            // Mark messages as read
-            if (!savedLogin.isAdmin) {
+            // Marquer comme lus si enseignant individuel
+            if (!savedLogin.isAdmin && teacherName && teacherName !== 'all') {
                 await fetch('/api/mark-messages-read', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ teacherName })
                 });
-                updateUnreadCount(0);
+                // Mettre à jour le badge
+                const badge = document.getElementById('unread-count');
+                if (badge) badge.style.display = 'none';
             }
             
         } catch (error) {
             console.error('Erreur:', error);
             messagesContainer.innerHTML = '<p class="error-message">Erreur de chargement des messages.</p>';
+        }
+    }
+    
+    // Charger les réponses dans la vue messages enseignant
+    async function loadRepliesInView(messageId, containerId, lang) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        try {
+            const response = await fetch(`/api/get-conversation?messageId=${messageId}`);
+            if (!response.ok) return;
+            const data = await response.json();
+            if (!data.replies || data.replies.length === 0) return;
+            
+            container.innerHTML = `
+                <div style="margin-top: 10px; padding-left: 15px; border-left: 3px solid #10b981;">
+                    <p style="font-size: 0.85em; color: #6b7280; margin: 0 0 8px 0; font-weight: 600;">${lang === 'ar' ? 'ردودك:' : 'Vos réponses :'}</p>
+                    ${data.replies.map(reply => `
+                        <div style="background: #ecfdf5; padding: 12px; border-radius: 8px; margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                <strong style="color: #059669;">🧑‍🏫 ${reply.teacherName}</strong>
+                                <span style="font-size: 0.82em; color: #6b7280;">${new Date(reply.createdAt || reply.timestamp).toLocaleString(lang === 'ar' ? 'ar-SA' : 'fr-FR')}</span>
+                            </div>
+                            <div style="color: #065f46; line-height: 1.5;">${reply.replyText}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch(e) {
+            console.error('Erreur chargement réponses:', e);
         }
     }
     
@@ -1873,24 +1931,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Vérifier les notifications parent
     async function checkParentNotifications() {
         const loggedParent = getLoggedParent();
+        const badge = document.getElementById('parent-notification-badge');
+        const viewBtn = document.getElementById('view-my-conversations-btn');
+        
         if (!loggedParent) {
-            document.getElementById('parent-notification-badge').style.display = 'none';
+            if (badge) badge.style.display = 'none';
+            if (viewBtn) viewBtn.style.display = 'none';
             return;
         }
+        
+        // Toujours afficher le bouton "Voir mes conversations" si connecté
+        if (viewBtn) viewBtn.style.display = 'block';
         
         try {
             const response = await fetch(`/api/parent-unread-replies?phone=${encodeURIComponent(loggedParent.phone)}`);
             if (!response.ok) return;
             
             const data = await response.json();
-            const badge = document.getElementById('parent-notification-badge');
             const countEl = document.getElementById('parent-unread-count');
             
             if (data.unreadCount > 0) {
-                countEl.textContent = data.unreadCount;
-                badge.style.display = 'block';
+                if (countEl) countEl.textContent = data.unreadCount;
+                if (badge) badge.style.display = 'flex';
             } else {
-                badge.style.display = 'none';
+                if (badge) badge.style.display = 'none';
             }
         } catch (error) {
             console.error('Erreur vérification notifications:', error);
@@ -1913,57 +1977,95 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Erreur de chargement');
             
             const data = await response.json();
+            const lang = document.documentElement.lang;
             
             if (data.messages.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: #6b7280;">Aucun message pour le moment</p>';
+                listDiv.innerHTML = `<p style="text-align: center; color: #6b7280; padding: 20px;">${lang === 'ar' ? 'لا توجد رسائل حتى الآن' : 'Aucun message pour le moment'}</p>`;
                 return;
             }
             
             listDiv.innerHTML = '';
             
-            // Charger les messages avec leurs réponses
+            // Charger les messages avec leurs conversations (chat complet)
             for (const msg of data.messages) {
-                const card = document.createElement('div');
-                card.style.cssText = 'padding: 15px; margin: 10px 0; background: #f9fafb; border-radius: 8px; border-left: 4px solid #667eea;';
-                
-                // Charger les réponses pour ce message
-                let repliesHtml = '';
+                // Récupérer les réponses de l'enseignant
+                let replies = [];
                 try {
                     const convResponse = await fetch(`/api/get-conversation?messageId=${msg._id}`);
                     if (convResponse.ok) {
                         const convData = await convResponse.json();
-                        if (convData.replies && convData.replies.length > 0) {
-                            repliesHtml = `
-                                <div style="margin-top: 15px; padding-left: 20px; border-left: 3px solid #10b981;">
-                                    ${convData.replies.map(reply => `
-                                        <div style="background: #ecfdf5; padding: 12px; border-radius: 8px; margin-top: 10px;">
-                                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                                <strong style="color: #059669;">🧑‍🏫 ${reply.teacherName}</strong>
-                                                <span style="font-size: 0.85em; color: #6b7280;">${new Date(reply.timestamp).toLocaleString('fr-FR')}</span>
-                                            </div>
-                                            <div style="color: #065f46;">${reply.replyText}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            `;
-                        }
+                        replies = convData.replies || [];
                     }
                 } catch (e) {
                     console.error('Erreur chargement réponses:', e);
                 }
                 
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <strong>À: ${msg.teacherName}</strong>
-                        <span style="font-size: 0.9em; color: #6b7280;">${new Date(msg.date).toLocaleString('fr-FR')}</span>
-                    </div>
-                    <p style="margin: 0; color: #374151;">${msg.message}</p>
-                    ${repliesHtml}
+                const hasReplies = replies.length > 0;
+                const dateStr = new Date(msg.date || msg.createdAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'fr-FR');
+                
+                // Carte de conversation (style chat)
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    margin: 16px 0;
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                    overflow: hidden;
+                    border: 1px solid ${hasReplies ? '#a7f3d0' : '#e5e7eb'};
                 `;
+                
+                // En-tête de la conversation
+                let chatBubbles = `
+                    <div style="background: linear-gradient(135deg, #667eea10, #764ba210); padding: 14px 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: #4c51bf;">🧑‍🏫 ${msg.teacherName}</span>
+                        <span style="font-size: 0.8em; color: #9ca3af;">${dateStr}</span>
+                    </div>
+                    <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                `;
+                
+                // Bulle du parent (côté droit)
+                chatBubbles += `
+                    <div style="display: flex; justify-content: flex-end;">
+                        <div style="max-width: 80%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 16px; border-radius: 18px 18px 4px 18px; line-height: 1.5; font-size: 0.95rem; box-shadow: 0 2px 8px rgba(102,126,234,0.3);">
+                            <div style="font-size: 0.78em; opacity: 0.8; margin-bottom: 6px; text-align: right;">${lang === 'ar' ? 'رسالتك' : 'Votre message'}</div>
+                            ${msg.message}
+                        </div>
+                    </div>
+                `;
+                
+                // Bulles des réponses de l'enseignant (côté gauche)
+                if (hasReplies) {
+                    replies.forEach(reply => {
+                        const replyDate = new Date(reply.createdAt || reply.timestamp).toLocaleString(lang === 'ar' ? 'ar-SA' : 'fr-FR');
+                        chatBubbles += `
+                            <div style="display: flex; justify-content: flex-start; align-items: flex-end; gap: 10px;">
+                                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem;">🧑‍🏫</div>
+                                <div style="max-width: 80%;">
+                                    <div style="font-size: 0.78em; color: #6b7280; margin-bottom: 4px;">${reply.teacherName} · ${replyDate}</div>
+                                    <div style="background: #ecfdf5; color: #065f46; padding: 12px 16px; border-radius: 18px 18px 18px 4px; line-height: 1.5; font-size: 0.95rem; box-shadow: 0 2px 8px rgba(16,185,129,0.15); border: 1px solid #a7f3d0;">
+                                        ${reply.replyText}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    // Indicateur "en attente de réponse"
+                    chatBubbles += `
+                        <div style="text-align: center; padding: 10px;">
+                            <span style="font-size: 0.82em; color: #9ca3af; background: #f3f4f6; padding: 6px 14px; border-radius: 20px;">
+                                ⏳ ${lang === 'ar' ? 'في انتظار رد المربي' : 'En attente de réponse de l\'enseignant'}
+                            </span>
+                        </div>
+                    `;
+                }
+                
+                chatBubbles += `</div>`;
+                card.innerHTML = chatBubbles;
                 listDiv.appendChild(card);
             }
             
-            // Marquer comme lues
+            // Marquer les réponses comme lues
             await fetch('/api/mark-replies-read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1984,14 +2086,30 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('parent-messages-history').style.display = 'none';
     });
     
+    // Bouton "Voir mes conversations" toujours visible si connecté
+    document.getElementById('view-my-conversations-btn')?.addEventListener('click', showParentMessagesHistory);
+    
     // Populate teachers contact when parent view is shown
     goToParentBtn.addEventListener('click', () => {
         populateTeachersContact();
         checkParentNotifications();
+        updateParentActionsBar();
         
         // Vérifier les notifications régulièrement (toutes les 30 secondes)
-        setInterval(checkParentNotifications, 30000);
+        setInterval(() => {
+            checkParentNotifications();
+            updateParentActionsBar();
+        }, 30000);
     });
+    
+    // Afficher/masquer la barre d'actions selon connexion parent
+    function updateParentActionsBar() {
+        const loggedParent = getLoggedParent();
+        const btn = document.getElementById('view-my-conversations-btn');
+        if (btn) {
+            btn.style.display = loggedParent ? 'block' : 'none';
+        }
+    }
     
     // Update translations for teacher contact and parent accounts
     translations.fr = {
